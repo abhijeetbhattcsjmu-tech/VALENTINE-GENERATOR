@@ -18,121 +18,53 @@ HTML = """
 
 body {
     margin: 0;
-    background: linear-gradient(135deg, #ff9a9e, #fad0c4);
+    background: linear-gradient(135deg, #ff758c, #ff7eb3);
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .card {
     background: white;
     width: 90%;
     max-width: 400px;
-    padding: 25px;
-    border-radius: 18px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    padding: 28px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
     text-align: center;
+    animation: pop 0.5s ease;
+}
+
+@keyframes pop {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 
 h1 {
-    color: #ff4d6d;
+    color: #ff3366;
     margin-bottom: 10px;
 }
 
 input {
     width: 100%;
-    padding: 14px;
-    margin: 10px 0;
+    padding: 15px;
+    margin: 12px 0;
     font-size: 16px;
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1px solid #ddd;
 }
 
 button {
     width: 100%;
-    padding: 16px;
+    padding: 18px;
     font-size: 18px;
-    border-radius: 14px;
+    border-radius: 16px;
     border: none;
-    margin-top: 10px;
+    margin-top: 12px;
     cursor: pointer;
 }
 
 .generate {
-    background: #ff4d6d;
-    color: white;
-}
-
-.yes {
-    background: #38b000;
-    color: white;
-}
-
-.no {
-    background: #adb5bd;
-    color: white;
-    position: relative;
-}
-</style>
-</head>
-
-<body>
-
-{% if page == 'generator' %}
-<div class="card">
-    <h1>💘 Valentine Generator</h1>
-    <form action="/proposal">
-        <input name="from_name" placeholder="Your name" required>
-        <input name="to_name" placeholder="Their name" required>
-        <button class="generate">Generate 💖</button>
-    </form>
-</div>
-
-{% else %}
-<div class="card">
-    <h1>{{ from_name }} ❤️ {{ to_name }}</h1>
-    <p style="font-size:18px;">Will you be my Valentine?</p>
-
-    <button class="yes" onclick="yes()">YES 💘</button>
-    <button class="no" id="no" onclick="move()">NO 🙈</button>
-</div>
-
-<script>
-function move() {
-    const btn = document.getElementById("no");
-    btn.style.position = "absolute";
-    btn.style.left = Math.random() * (window.innerWidth - btn.offsetWidth) + "px";
-    btn.style.top = Math.random() * (window.innerHeight - btn.offsetHeight) + "px";
-}
-
-function yes() {
-    document.body.innerHTML = `
-        <div class="card">
-            <h1>💖 She Said YES! 💖</h1>
-            <p>You are officially a Valentine champion 😎</p>
-        </div>
-    `;
-}
-</script>
-{% endif %}
-
-</body>
-</html>
-"""
-
-@app.route("/")
-def home():
-    return render_template_string(HTML, page="generator")
-
-@app.route("/proposal")
-def proposal():
-    return render_template_string(
-        HTML,
-        page="proposal",
-        from_name=request.args.get("from_name"),
-        to_name=request.args.get("to_name")
-    )
-
-if __name__ == "__main__":
-    app.run()
+    background:
