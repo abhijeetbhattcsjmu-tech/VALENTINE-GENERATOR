@@ -1,133 +1,201 @@
-from flask import Flask, request, render_template_string, url_for
-import urllib.parse
+from flask import Flask, request, redirect, url_for, render_template_string
+import uuid
 
 app = Flask(__name__)
 
-HTML = r"""
+DATA = {}
+
+HTML_HOME = """
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Valentine 💘</title>
-
+<title>Valentine Generator 💘</title>
 <style>
-body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #ff758c, #ff7eb3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+body{
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg,#ff758c,#ff7eb3);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0;
 }
-.card {
-    background: white;
-    width: 90%;
-    max-width: 420px;
-    padding: 28px;
-    border-radius: 20px;
-    text-align: center;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+.card{
+    background:#fff;
+    padding:22px;
+    border-radius:18px;
+    width:92%;
+    max-width:360px;
+    text-align:center;
 }
-input, button {
-    width: 100%;
-    padding: 14px;
-    margin-top: 12px;
-    border-radius: 14px;
-    border: none;
-    font-size: 16px;
+input,button{
+    width:100%;
+    padding:14px;
+    margin-top:12px;
+    border-radius:14px;
+    border:1px solid #ddd;
+    font-size:16px;
 }
-button { cursor: pointer; }
-.yes { background: #2ec4b6; color: white; }
-.no { background: #adb5bd; color: white; position: absolute; }
-.share { background: #25D366; color: white; }
+button{
+    background:#ff4d6d;
+    color:#fff;
+    border:none;
+}
 </style>
 </head>
-
 <body>
-
-{% if page == "generator" %}
 <div class="card">
-    <h2>💘 Valentine Generator</h2>
-    <form action="/create">
-        <input name="sender" placeholder="Your name" required>
-        <input name="receiver" placeholder="Their name" required>
-        <input name="quote" placeholder="Custom YES quote (optional)">
-        <button>Create Link 💖</button>
-    </form>
+<h2>💘 Valentine Generator</h2>
+<form method="post">
+<input name="sender" placeholder="Your name" required>
+<input name="receiver" placeholder="Your love's name" required>
+<input name="quote" placeholder="Optional love quote">
+<button>Create Link 💝</button>
+</form>
 </div>
-
-{% elif page == "link" %}
-<div class="card">
-    <h3>🎉 Your Valentine Link</h3>
-    <input value="{{ link }}" onclick="this.select()" readonly>
-    <button class="share" onclick="share()">Share on WhatsApp 💬</button>
-</div>
-
-{% elif page == "proposal" %}
-<div class="card" id="card">
-    <h2>{{ sender }} 💌</h2>
-    <p>{{ receiver }}, will you be my Valentine?</p>
-    <button class="yes" onclick="yes()">YES 💘</button>
-    <button class="no" id="no" onclick="move()">NO 😅</button>
-</div>
-
-<script>
-function move() {
-    const btn = document.getElementById("no");
-    btn.style.left = Math.random() * (window.innerWidth - btn.offsetWidth) + "px";
-    btn.style.top = Math.random() * (window.innerHeight - btn.offsetHeight) + "px";
-}
-function yes() {
-    document.body.innerHTML = `
-        <div class="card">
-            <h2>💖 YES 💖</h2>
-            <p>{{ yes_msg }}</p>
-        </div>
-    `;
-}
-function share() {
-    const text = encodeURIComponent("Answer this Valentine proposal 💘 {{ link }}");
-    window.open("https://wa.me/?text=" + text);
-}
-</script>
-{% endif %}
-
 </body>
 </html>
 """
 
-@app.route("/")
+HTML_SHARE = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Share 💌</title>
+<style>
+body{
+    background:#ffdde1;
+    font-family:Arial;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    margin:0;
+}
+.card{
+    background:#fff;
+    padding:24px;
+    border-radius:20px;
+    width:92%;
+    max-width:360px;
+    text-align:center;
+}
+a{
+    display:block;
+    background:#25D366;
+    color:white;
+    padding:14px;
+    border-radius:14px;
+    text-decoration:none;
+    margin-top:14px;
+    font-size:18px;
+}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>Link Created 💘</h2>
+<p>Send this to {{ receiver }}</p>
+
+<a href="https://wa.me/?text={{ msg }}">Share on WhatsApp 💬</a>
+</div>
+</body>
+</html>
+"""
+
+HTML_PROPOSAL = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💘 Proposal</title>
+<style>
+body{
+    background:linear-gradient(135deg,#ff9a9e,#fad0c4);
+    font-family:Arial;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    margin:0;
+}
+.card{
+    background:#fff;
+    padding:24px;
+    border-radius:20px;
+    width:92%;
+    max-width:360px;
+    text-align:center;
+}
+button{
+    padding:14px;
+    width:45%;
+    border-radius:14px;
+    border:none;
+    font-size:16px;
+}
+.yes{background:#38b000;color:#fff;}
+.no{background:#d00000;color:#fff;}
+</style>
+<script>
+function sayYes(){
+    document.getElementById("result").innerHTML =
+    "💖 {{ sender }} says:<br><br>{{ quote }}";
+}
+function sayNo(){
+    document.getElementById("result").innerHTML =
+    "😢 Better luck next time, {{ sender }}!";
+}
+</script>
+</head>
+<body>
+<div class="card">
+<h2>{{ receiver }}, will you be my Valentine? 💘</h2>
+
+<div style="margin-top:20px;">
+<button class="yes" onclick="sayYes()">YES 💖</button>
+<button class="no" onclick="sayNo()">NO 😅</button>
+</div>
+
+<p id="result" style="margin-top:20px;font-size:18px;"></p>
+</div>
+</body>
+</html>
+"""
+
+@app.route("/", methods=["GET", "POST"])
 def home():
-    return render_template_string(HTML, page="generator")
+    if request.method == "POST":
+        uid = str(uuid.uuid4())[:8]
+        sender = request.form["sender"]
+        receiver = request.form["receiver"]
+        quote = request.form.get("quote") or "I’ve liked you more than pizza ❤️"
 
-@app.route("/create")
-def create():
-    sender = request.args.get("sender")
-    receiver = request.args.get("receiver")
-    quote = request.args.get("quote") or f"{receiver} accepted {sender}'s Valentine 💖"
+        DATA[uid] = {
+            "sender": sender,
+            "receiver": receiver,
+            "quote": quote
+        }
 
-    payload = urllib.parse.quote_plus(f"{sender}|{receiver}|{quote}")
-    link = request.host_url.rstrip("/") + url_for("valentine") + "?d=" + payload
+        link = request.url_root + "p/" + uid
+        msg = f"{sender} has a Valentine question for you 💘\\n\\nClick here 👉 {link}"
+        return render_template_string(HTML_SHARE, receiver=receiver, msg=msg)
+
+    return render_template_string(HTML_HOME)
+
+@app.route("/p/<uid>")
+def proposal(uid):
+    d = DATA.get(uid)
+    if not d:
+        return "Link expired 😢"
 
     return render_template_string(
-        HTML,
-        page="link",
-        link=link
-    )
-
-@app.route("/v")
-def valentine():
-    data = urllib.parse.unquote_plus(request.args.get("d"))
-    sender, receiver, quote = data.split("|")
-
-    return render_template_string(
-        HTML,
-        page="proposal",
-        sender=sender,
-        receiver=receiver,
-        yes_msg=quote
+        HTML_PROPOSAL,
+        sender=d["sender"],
+        receiver=d["receiver"],
+        quote=d["quote"]
     )
 
 if __name__ == "__main__":
