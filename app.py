@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, url_for
 import urllib.parse
 
 app = Flask(__name__)
@@ -20,7 +20,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
 }
 .card {
     background: white;
@@ -30,11 +29,6 @@ body {
     border-radius: 20px;
     text-align: center;
     box-shadow: 0 20px 40px rgba(0,0,0,0.25);
-    animation: pop 0.5s ease;
-}
-@keyframes pop {
-    from { transform: scale(0.85); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
 }
 input, button {
     width: 100%;
@@ -48,16 +42,6 @@ button { cursor: pointer; }
 .yes { background: #2ec4b6; color: white; }
 .no { background: #adb5bd; color: white; position: absolute; }
 .share { background: #25D366; color: white; }
-
-.confetti {
-    position: fixed;
-    top: -10px;
-    font-size: 22px;
-    animation: fall 3s linear forwards;
-}
-@keyframes fall {
-    to { transform: translateY(110vh) rotate(360deg); opacity: 0; }
-}
 </style>
 </head>
 
@@ -74,11 +58,17 @@ button { cursor: pointer; }
     </form>
 </div>
 
+{% elif page == "link" %}
+<div class="card">
+    <h3>🎉 Your Valentine Link</h3>
+    <input value="{{ link }}" onclick="this.select()" readonly>
+    <button class="share" onclick="share()">Share on WhatsApp 💬</button>
+</div>
+
 {% elif page == "proposal" %}
 <div class="card" id="card">
     <h2>{{ sender }} 💌</h2>
     <p>{{ receiver }}, will you be my Valentine?</p>
-
     <button class="yes" onclick="yes()">YES 💘</button>
     <button class="no" id="no" onclick="move()">NO 😅</button>
 </div>
@@ -89,32 +79,19 @@ function move() {
     btn.style.left = Math.random() * (window.innerWidth - btn.offsetWidth) + "px";
     btn.style.top = Math.random() * (window.innerHeight - btn.offsetHeight) + "px";
 }
-
 function yes() {
-    for (let i = 0; i < 80; i++) {
-        let c = document.createElement("div");
-        c.className = "confetti";
-        c.innerHTML = "💖";
-        c.style.left = Math.random() * 100 + "vw";
-        document.body.appendChild(c);
-        setTimeout(() => c.remove(), 3000);
-    }
-
     document.body.innerHTML = `
         <div class="card">
             <h2>💖 YES 💖</h2>
             <p>{{ yes_msg }}</p>
-            <button class="share" onclick="share()">Share 💬</button>
         </div>
     `;
 }
-
 function share() {
-    const text = encodeURIComponent("I just answered a Valentine proposal 💘");
+    const text = encodeURIComponent("Answer this Valentine proposal 💘 {{ link }}");
     window.open("https://wa.me/?text=" + text);
 }
 </script>
-
 {% endif %}
 
 </body>
@@ -131,19 +108,19 @@ def create():
     receiver = request.args.get("receiver")
     quote = request.args.get("quote") or f"{receiver} accepted {sender}'s Valentine 💖"
 
-    data = urllib.parse.quote(f"{sender}|{receiver}|{quote}")
-    return f"""
-    <div style='text-align:center'>
-        <h3>Your Valentine link is ready 💘</h3>
-        <a href='/v?d={data}'>Open Valentine</a>
-    </div>
-    """
+    payload = urllib.parse.quote_plus(f"{sender}|{receiver}|{quote}")
+    link = request.host_url.rstrip("/") + url_for("valentine") + "?d=" + payload
+
+    return render_template_string(
+        HTML,
+        page="link",
+        link=link
+    )
 
 @app.route("/v")
 def valentine():
-    sender, receiver, quote = urllib.parse.unquote(
-        request.args.get("d")
-    ).split("|")
+    data = urllib.parse.unquote_plus(request.args.get("d"))
+    sender, receiver, quote = data.split("|")
 
     return render_template_string(
         HTML,
