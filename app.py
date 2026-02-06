@@ -3,7 +3,7 @@ import urllib.parse
 
 app = Flask(__name__)
 
-HTML = """
+TEMPLATE = r"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -37,9 +37,7 @@ input, button {
     border: none;
     font-size: 16px;
 }
-button {
-    cursor: pointer;
-}
+button { cursor: pointer; }
 .yes { background: #2ec4b6; color: white; }
 .no { background: #adb5bd; color: white; }
 </style>
@@ -47,16 +45,7 @@ button {
 
 <body>
 
-{% if page == "password" %}
-<div class="card">
-    <h2>🔒 Enter Password</h2>
-    <form method="get">
-        <input name="pass_try" placeholder="Password" required>
-        <button>Unlock 💘</button>
-    </form>
-</div>
-
-{% elif page == "ask" %}
+{% if page == "ask" %}
 <div class="card">
     <h2>💌 Valentine Time</h2>
     <form>
@@ -66,4 +55,81 @@ button {
     </form>
 </div>
 
-{% elif p
+{% elif page == "proposal" %}
+<div class="card">
+    <h2>{{ from_name }} ❤️ {{ to_name }}</h2>
+    <p>Will you be my Valentine?</p>
+
+    <button class="yes" onclick="yes()">YES 💘</button>
+    <button class="no" onclick="nope()">NO 😅</button>
+</div>
+
+<script>
+function yes() {
+    document.body.innerHTML = `
+        <div class="card">
+            <h2>💖 YES 💖</h2>
+            <p>{{ quote }}</p>
+        </div>
+    `;
+}
+function nope() {
+    document.body.innerHTML = `
+        <div class="card">
+            <h2>😅 Oops</h2>
+            <p>Better luck next time 💔</p>
+        </div>
+    `;
+}
+</script>
+{% endif %}
+
+</body>
+</html>
+"""
+
+@app.route("/")
+def generator():
+    return """
+    <h3>Create Valentine Link</h3>
+    <form action="/create">
+        <input name="quote" placeholder="YES quote (optional)">
+        <input name="password" placeholder="Password (optional)">
+        <button>Create Link</button>
+    </form>
+    """
+
+@app.route("/create")
+def create():
+    quote = request.args.get("quote") or "You just made this Valentine unforgettable 💖"
+    password = request.args.get("password", "")
+    data = urllib.parse.quote(f"{quote}|{password}")
+    return f"Your link:<br><a href='/v?d={data}'>Open Valentine</a>"
+
+@app.route("/v")
+def valentine():
+    data = urllib.parse.unquote(request.args.get("d", ""))
+    quote, password = data.split("|")
+
+    if password and request.args.get("pass_try") != password:
+        return """
+        <h3>🔒 Enter Password</h3>
+        <form>
+            <input name="pass_try" placeholder="Password">
+            <button>Unlock</button>
+        </form>
+        """
+
+    if "from_name" not in request.args:
+        return render_template_string(TEMPLATE, page="ask")
+
+    return render_template_string(
+        TEMPLATE,
+        page="proposal",
+        from_name=request.args["from_name"],
+        to_name=request.args["to_name"],
+        quote=quote
+    )
+
+if __name__ == "__main__":
+    app.run()
