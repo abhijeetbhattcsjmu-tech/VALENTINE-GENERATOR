@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for, render_template_string
+from flask import Flask, request, render_template_string
 import uuid
 
 app = Flask(__name__)
@@ -50,7 +50,8 @@ button{
 <form method="post">
 <input name="sender" placeholder="Your name" required>
 <input name="receiver" placeholder="Your love's name" required>
-<input name="quote" placeholder="Optional love quote">
+<input name="yes_msg" placeholder="YES message (optional)">
+<input name="no_msg" placeholder="NO message (optional)">
 <button>Create Link 💝</button>
 </form>
 </div>
@@ -98,7 +99,6 @@ a{
 <div class="card">
 <h2>Link Created 💘</h2>
 <p>Send this to {{ receiver }}</p>
-
 <a href="https://wa.me/?text={{ msg }}">Share on WhatsApp 💬</a>
 </div>
 </body>
@@ -142,23 +142,21 @@ button{
 <script>
 function sayYes(){
     document.getElementById("result").innerHTML =
-    "💖 {{ sender }} says:<br><br>{{ quote }}";
+    "💖 {{ sender }} says:<br><br>{{ yes_msg }}";
 }
 function sayNo(){
     document.getElementById("result").innerHTML =
-    "😢 Better luck next time, {{ sender }}!";
+    "💔 {{ sender }} says:<br><br>{{ no_msg }}";
 }
 </script>
 </head>
 <body>
 <div class="card">
 <h2>{{ receiver }}, will you be my Valentine? 💘</h2>
-
 <div style="margin-top:20px;">
 <button class="yes" onclick="sayYes()">YES 💖</button>
 <button class="no" onclick="sayNo()">NO 😅</button>
 </div>
-
 <p id="result" style="margin-top:20px;font-size:18px;"></p>
 </div>
 </body>
@@ -171,12 +169,15 @@ def home():
         uid = str(uuid.uuid4())[:8]
         sender = request.form["sender"]
         receiver = request.form["receiver"]
-        quote = request.form.get("quote") or "I’ve liked you more than pizza ❤️"
+
+        yes_msg = request.form.get("yes_msg") or "I’ve liked you more than pizza ❤️"
+        no_msg = request.form.get("no_msg") or "It’s okay, maybe in another universe 😌"
 
         DATA[uid] = {
             "sender": sender,
             "receiver": receiver,
-            "quote": quote
+            "yes_msg": yes_msg,
+            "no_msg": no_msg
         }
 
         link = request.url_root + "p/" + uid
@@ -195,7 +196,8 @@ def proposal(uid):
         HTML_PROPOSAL,
         sender=d["sender"],
         receiver=d["receiver"],
-        quote=d["quote"]
+        yes_msg=d["yes_msg"],
+        no_msg=d["no_msg"]
     )
 
 if __name__ == "__main__":
